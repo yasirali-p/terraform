@@ -1,0 +1,47 @@
+# Specify the Terraform provider for AWS
+provider "aws" {
+  region = "ap-south-1"  # Specify your AWS region here
+}
+
+# Create a key pair for SSH access (Ensure the file path is correct for your system)
+resource "aws_key_pair" "example_key" {
+  key_name   = "yasir1-new-key"   # Name of the key pair
+  public_key = file("~/.ssh/id_rsa.pub")  # Specify the path to your public key
+}
+
+# Create a security group to allow inbound traffic (SSH)
+resource "aws_security_group" "example_sg" {
+  name        = "launch-wizard-20"
+  description = "Allow inbound SSH traffic"
+
+  # Inbound rule to allow SSH (port 22)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Allow SSH from any IP (for demo purposes, refine as needed)
+  }
+
+  # Outbound rule to allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"  # Allow all outbound traffic
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Define the EC2 instance
+resource "aws_instance" "example" {
+  ami           = "ami-00bb6a80f01f03502"  # Example AMI ID for Amazon Linux 2 (update to your preferred AMI)
+  instance_type = "t2.micro"                # Instance type (you can modify this as needed)
+
+  # Reference the key pair and security group created above
+  key_name      = aws_key_pair.example_key.key_name
+  security_groups = [aws_security_group.example_sg.name]
+
+  # Optionally, add a name to the instance
+  tags = {
+    Name = "Terraform Instance"
+  }
+}
