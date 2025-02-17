@@ -1,0 +1,66 @@
+provider "aws" {
+  region = "us-west-2"  # Replace with your desired AWS region
+}
+
+# Security Group
+resource "aws_security_group" "my_sg" {
+  name        = "my_security_group"
+  description = "Allow SSH and HTTP inbound traffic"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Allow SSH from anywhere
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Allow HTTP from anywhere
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]  # Allow all outbound traffic
+  }
+
+  tags = {
+    Name = "MySecurityGroup"
+  }
+}
+
+# Key Pair
+resource "aws_key_pair" "my_key" {
+  key_name   = "my-key-pair"  # Replace with your desired key name
+  public_key = file("~/.ssh/id_rsa.pub")  # Path to your local SSH public key
+}
+
+# EC2 Instance
+resource "aws_instance" "my_instance" {
+  ami           = "ami-0c55b159cbfafe1f0"  # Replace with a valid AMI ID
+  instance_type = "t2.micro"  # Instance type (can be changed based on your needs)
+  key_name      = aws_key_pair.my_key.key_name  # Reference the key pair
+  security_groups = [aws_security_group.my_sg.name]  # Attach the security group
+
+  # User data script to install Docker
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt-get update -y
+              sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+              sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+              sudo apt-get update -y
+              sudo apt-get install -y docker-ce
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              EOF
+
+  tags = {
+    Name = "MyInstance"
+    Environment = "Dev"
+  }
+}
